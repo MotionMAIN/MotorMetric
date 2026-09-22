@@ -6,11 +6,11 @@ export function SearchForm({ defaultValue = "", compact = false }: { defaultValu
       <label className="search-box">
         <span className="search-field">
           <Search size={21} aria-hidden="true" />
-          <span className="sr-only">Fahrzeug, Baureihe oder HSN/TSN suchen</span>
+          <span className="sr-only">Fahrzeugmodell oder HSN/TSN suchen</span>
           <input
             name="q"
             defaultValue={defaultValue}
-            placeholder="z. B. Mercedes CL 500, C216 oder 0999 AFT"
+            placeholder="z. B. Mercedes CL 500 oder 0999 AFT"
             autoComplete="off"
             list="vehicle-examples"
           />
@@ -19,8 +19,7 @@ export function SearchForm({ defaultValue = "", compact = false }: { defaultValu
       </label>
       <datalist id="vehicle-examples">
         <option value="CL 500" />
-        <option value="C216 CL 500" />
-        <option value="W211 E 420 CDI" />
+        <option value="E 420 CDI" />
         <option value="0999 AFT" />
       </datalist>
     </form>

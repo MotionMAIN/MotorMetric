@@ -15,7 +15,7 @@ export function aggregateVehicle(vehicle: VehicleVariant): VehicleResult {
 function searchableText(vehicle: VehicleVariant): string {
   const aliases = demoAliases.get(vehicle.slug) ?? [];
   const keys = vehicle.keys.flatMap((key) => [`${key.hsn}${key.tsn}`, `${key.hsn} ${key.tsn}`]);
-  return [vehicle.manufacturer, vehicle.family, vehicle.generation, vehicle.name, vehicle.facelift, ...aliases, ...keys]
+  return [vehicle.manufacturer, vehicle.family, vehicle.name, vehicle.facelift, ...aliases, ...keys]
     .map(normalizeVehicleQuery)
     .join(" ");
 }

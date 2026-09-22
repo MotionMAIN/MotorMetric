@@ -108,10 +108,6 @@ function matchesCompactQuery(tradeName: string | null, tokens: string[]): boolea
     ? tokens[0]
     : spacedModel;
   if (!compactModel) return true;
-  const normalizedName = (tradeName ?? "").replace(/[^a-z0-9]/gi, "").toLowerCase();
-  const normalizedQuery = compactModel.replace(/[^a-z0-9]/gi, "").toLowerCase();
-  const historicChassis = normalizedQuery.match(/^[wcrx](\d{3})$/)?.[1];
-  if (historicChassis && normalizedName.startsWith(historicChassis)) return true;
   const modelParts = splitCompactVehicleToken(compactModel);
   return new RegExp(`(?:^|[^a-z0-9])${modelParts.join("\\s*")}(?:$|[^a-z0-9])`, "i").test(tradeName ?? "");
 }
@@ -163,7 +159,6 @@ function fz2TokenCondition(token: string, expandCompact: boolean): Prisma.Fz2Veh
 
 export interface VehicleSearchOutcome {
   results: VehicleResult[];
-  ignoredTerm: string | null;
   facets: { years: number[]; manufacturers: string[]; referenceDecades: number[]; fuels: string[] };
   selectedYear: number;
 }
@@ -205,22 +200,6 @@ async function findFz2Records(tokens: string[], year: number, expandCompact = fa
   });
 }
 
-async function findHistoricMercedesChassis(code: string, year: number) {
-  return prisma.fz2VehicleSnapshot.findMany({
-    where: {
-      reportingDate: yearRange(year),
-      tradeName: { startsWith: `${code} (`, mode: "insensitive" },
-      OR: [
-        { manufacturerName: { contains: "DAIMLER", mode: "insensitive" } },
-        { manufacturerName: { contains: "MERCEDES", mode: "insensitive" } },
-      ],
-    },
-    include: { sourceFile: { include: { dataSource: true } } },
-    orderBy: [{ manufacturerName: "asc" }, { tradeName: "asc" }, { tsn: "asc" }],
-    take: 100,
-  });
-}
-
 function mergeRecordsById<T extends { id: number }>(...recordSets: T[][]): T[] {
   return [...new Map(recordSets.flat().map((record) => [record.id, record])).values()];
 }
@@ -233,40 +212,18 @@ async function findKbaSearchRecords(tokens: string[], key: { hsn: string; tsn: s
 
 async function findFz2SearchRecords(tokens: string[], year: number) {
   const direct = await findFz2Records(tokens, year);
-  const chassisCode = tokens.length === 1 ? tokens[0].match(/^[wcrx](\d{3})$/i)?.[1] : undefined;
-  if (chassisCode) return mergeRecordsById(direct, await findHistoricMercedesChassis(chassisCode, year));
   if (tokens.length !== 1 || splitCompactVehicleToken(tokens[0]).length === 1) return direct;
   return mergeRecordsById(direct, await findFz2Records(tokens, year, true));
 }
 
-function codeLikeToken(token: string): boolean {
-  return /^(?=.*[a-z])(?=.*\d)[a-z\d-]{2,6}$/i.test(token);
-}
-
 async function findHistoricCandidateYears(tokens: string[]): Promise<number[]> {
   if (!tokens.length) return [];
-  const tokenSets = [
-    tokens,
-    ...tokens.flatMap((token, index) => codeLikeToken(token) && tokens.length > 1
-      ? [tokens.filter((_, tokenIndex) => tokenIndex !== index)]
-      : []),
-  ];
-  const conditions = tokenSets.flatMap<Prisma.Fz2VehicleSnapshotWhereInput>((candidateTokens) => {
+  const conditions = [tokens].flatMap<Prisma.Fz2VehicleSnapshotWhereInput>((candidateTokens) => {
     const variants: Prisma.Fz2VehicleSnapshotWhereInput[] = [
       { AND: candidateTokens.map((token) => fz2TokenCondition(token, false)) },
     ];
     if (candidateTokens.length === 1 && splitCompactVehicleToken(candidateTokens[0]).length > 1) {
       variants.push({ AND: candidateTokens.map((token) => fz2TokenCondition(token, true)) });
-    }
-    const chassisCode = candidateTokens.length === 1 ? candidateTokens[0].match(/^[wcrx](\d{3})$/i)?.[1] : undefined;
-    if (chassisCode) {
-      variants.push({
-        tradeName: { startsWith: `${chassisCode} (`, mode: "insensitive" },
-        OR: [
-          { manufacturerName: { contains: "DAIMLER", mode: "insensitive" } },
-          { manufacturerName: { contains: "MERCEDES", mode: "insensitive" } },
-        ],
-      });
     }
     return variants;
   });
@@ -296,43 +253,19 @@ export async function searchVehicles(query: string, filters: SearchFilters = {})
   const key = keyQuery(query);
   const intent = parseTechnicalSearch(query);
   const tokens = intent.textTokens.slice(0, 6);
-  let matchedTokens = tokens;
-  let ignoredTerm: string | null = null;
   let results: VehicleResult[];
 
   if (selectedYear >= 2019) {
     const records = await findKbaSearchRecords(tokens, key, selectedYear);
-    if (records.length === 0 && !key && tokens.length > 1) {
-      for (let index = tokens.length - 1; index >= 0; index -= 1) {
-        if (!codeLikeToken(tokens[index])) continue;
-        const fallback = await findKbaSearchRecords(tokens.filter((_, tokenIndex) => tokenIndex !== index), null, selectedYear);
-        if (!fallback.length) continue;
-        records.push(...fallback);
-        ignoredTerm = tokens[index];
-        matchedTokens = tokens.filter((_, tokenIndex) => tokenIndex !== index);
-        break;
-      }
-    }
     results = records
-      .filter((record) => matchesCompactQuery(record.tradeName, matchedTokens))
+      .filter((record) => matchesCompactQuery(record.tradeName, tokens))
       .map(toVehicleResult)
       .filter((result): result is VehicleResult => result !== null)
       .filter((result) => matchesTechnicalIntent(result, intent));
   } else {
     const records = key ? [] : await findFz2SearchRecords(tokens, selectedYear);
-    if (records.length === 0 && !key && tokens.length > 1) {
-      for (let index = tokens.length - 1; index >= 0; index -= 1) {
-        if (!codeLikeToken(tokens[index])) continue;
-        const fallback = await findFz2SearchRecords(tokens.filter((_, tokenIndex) => tokenIndex !== index), selectedYear);
-        if (!fallback.length) continue;
-        records.push(...fallback);
-        ignoredTerm = tokens[index];
-        matchedTokens = tokens.filter((_, tokenIndex) => tokenIndex !== index);
-        break;
-      }
-    }
     results = records
-      .filter((record) => matchesCompactQuery(record.tradeName, matchedTokens))
+      .filter((record) => matchesCompactQuery(record.tradeName, tokens))
       .map((record) => toFz2VehicleResult(record))
       .filter((result) => matchesTechnicalIntent(result, intent));
   }
@@ -356,7 +289,7 @@ export async function searchVehicles(query: string, filters: SearchFilters = {})
     }
   }
   if (!results.length && process.env.DEMO_DATA_FALLBACK === "true" && years.length === 0) results = searchDemoVehicles(query, filters);
-  return { results, ignoredTerm, facets: { years, manufacturers, referenceDecades, fuels }, selectedYear };
+  return { results, facets: { years, manufacturers, referenceDecades, fuels }, selectedYear };
 }
 
 export async function getVehicle(slug: string): Promise<VehicleResult | null> {

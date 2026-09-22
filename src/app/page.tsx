@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CheckCircle2, FileSearch, Info, ShieldCheck } from "lucide-react";
 import { SearchForm } from "@/components/search-form";
 import { ResultList } from "@/components/result-list";
+import { FilterDisclosure } from "@/components/filter-disclosure";
 import { getLatestStockStatus, searchVehicles } from "@/lib/vehicles/repository";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -24,7 +25,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
             <div className="hero-grid">
               <div>
                 <h1>Wie viele sind <span>noch da?</span></h1>
-                <p className="hero-copy">Durchsuche den deutschen Fahrzeugbestand nach amtlichem Handelsnamen, Schlüsselnummer oder historischem Mercedes-Baureihencode – mit lokal verfügbaren KBA-Stichtagen seit 2005.</p>
+                <p className="hero-copy">Durchsuche den deutschen Fahrzeugbestand nach amtlichem Modellnamen oder Schlüsselnummer – mit lokal verfügbaren KBA-Stichtagen seit 2005.</p>
               </div>
               <div className="data-status">
                 <strong>Neuester Datenstand</strong>
@@ -35,7 +36,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
             <SearchForm />
             <div className="examples">
               <span>Zum Ausprobieren:</span>
-              {["W220", "CL 500", "0710 430"].map((example) => (
+              {["S 500", "CL 500", "0710 430"].map((example) => (
                 <Link className="example-link" key={example} href={`/?q=${encodeURIComponent(example)}`}>{example}</Link>
               ))}
             </div>
@@ -59,7 +60,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
   const referenceDecade = getParam(params, "referenceDecade");
   const fuel = getParam(params, "fuel");
   const view = getParam(params, "view") === "registrations" ? "registrations" : "stock";
-  const { results, ignoredTerm, facets, selectedYear } = await searchVehicles(query, { generation, facelift, drivetrain, year, manufacturer, minimumStock, referenceDecade, fuel });
+  const { results, facets, selectedYear } = await searchVehicles(query, { generation, facelift, drivetrain, year, manufacturer, minimumStock, referenceDecade, fuel });
   const hasTechnicalReference = results.some((result) => !["KBA-Typenschlüssel", "KBA-FZ-2-Typ"].includes(result.generation));
   const viewParams = new URLSearchParams({ q: query });
   viewParams.set("year", String(selectedYear));
@@ -70,6 +71,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
   if (generation) viewParams.set("generation", generation);
   if (facelift) viewParams.set("facelift", facelift);
   if (drivetrain) viewParams.set("drivetrain", drivetrain);
+  const activeFilterCount = [manufacturer, minimumStock, referenceDecade, fuel, generation, facelift, drivetrain].filter(Boolean).length;
 
   return (
     <main className="results-page">
@@ -79,28 +81,29 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
           <div><h1>Ergebnisse für „{query}“</h1><p>{hasTechnicalReference ? "Nach Modellgeneration gruppiert, eindeutig zugeordnete Schlüssel summiert." : selectedYear >= 2019 ? "Amtliche HSN/TSN-Typen mit technischen Merkmalen aus KBA SV 4.2." : "Historische KBA-FZ-2-Typzeilen mit TSN und technischen Merkmalen."}</p></div>
           <div className="demo-notice"><strong>Amtlicher Bestand:</strong> Datenstand 1. Januar {selectedYear} aus {selectedYear >= 2019 ? "KBA FZ 6" : "KBA FZ 2"}. Baujahre und Generationen erscheinen erst nach einer belegten Referenzzuordnung.</div>
         </div>
-        {ignoredTerm && <div className="context-note"><FileSearch size={18} aria-hidden="true" /><div><strong>„{ignoredTerm}“ ist nicht in {selectedYear >= 2019 ? "KBA FZ 6" : "KBA FZ 2"} enthalten.</strong><br />Gezeigt werden Treffer für die übrigen Suchbegriffe. Eine Eingrenzung auf diesen Baureihencode ist erst mit einer belegten Fahrzeugreferenz belastbar möglich.</div></div>}
         <div className="workspace">
-          <form className="filter-panel" method="get">
-            <input type="hidden" name="q" value={query} />
-            <input type="hidden" name="view" value={view} />
-            <h2>Ergebnisse filtern</h2>
-            <div className="filter-group"><label htmlFor="year">Datenstand</label><select id="year" name="year" defaultValue={String(selectedYear)}>{facets.years.map((availableYear) => <option key={availableYear} value={availableYear}>1. Januar {availableYear}</option>)}</select></div>
-            <div className="filter-group"><label htmlFor="manufacturer">Hersteller</label><select id="manufacturer" name="manufacturer" defaultValue={manufacturer}><option value="">Alle Hersteller</option>{facets.manufacturers.map((name) => <option key={name} value={name}>{name}</option>)}</select></div>
-            <div className="filter-group"><label htmlFor="minimumStock">Mindestbestand</label><select id="minimumStock" name="minimumStock" defaultValue={minimumStock}><option value="">Kein Minimum</option><option value="10">Mindestens 10</option><option value="100">Mindestens 100</option><option value="1000">Mindestens 1.000</option></select></div>
-            {facets.referenceDecades.length > 0 && <div className="filter-group"><label htmlFor="referenceDecade">TSN-Zuteilung</label><select id="referenceDecade" name="referenceDecade" defaultValue={referenceDecade}><option value="">Alle Zeiträume</option>{facets.referenceDecades.map((decade) => <option key={decade} value={decade}>{decade}–{decade + 9}</option>)}</select></div>}
-            {facets.fuels.length > 0 && <div className="filter-group"><label htmlFor="fuel">Kraftstoff</label><select id="fuel" name="fuel" defaultValue={fuel}><option value="">Alle Kraftstoffe</option>{facets.fuels.map((fuelName) => <option key={fuelName} value={fuelName}>{fuelName}</option>)}</select></div>}
-            {hasTechnicalReference ? <>
-              <div className="filter-group"><label htmlFor="generation">Baureihe</label><select id="generation" name="generation" defaultValue={generation}><option value="">Alle Baureihen</option><option>C215</option><option>C216</option><option>W211</option></select></div>
-              <div className="filter-group"><label htmlFor="facelift">Modellpflege</label><select id="facelift" name="facelift" defaultValue={facelift}><option value="">Alle Stände</option><option>Vor-Mopf</option><option>Mopf</option></select></div>
-              <div className="filter-group"><label htmlFor="drivetrain">Antrieb</label><select id="drivetrain" name="drivetrain" defaultValue={drivetrain}><option value="">Alle Antriebe</option><option>Hinterradantrieb</option><option>4MATIC</option></select></div>
-            </> : <div className="filter-note">
-              <Info size={16} aria-hidden="true" />
-              <p><strong>Baujahr noch nicht ableitbar</strong>Die TSN-Zuteilung grenzt den Zeitraum ein. Für Baureihe und Modellpflege fehlt noch eine belegte Referenz.</p>
-            </div>}
-            <button className="primary-button filter-submit" type="submit">Filter anwenden</button>
-            <Link className="reset-link" href={`/?q=${encodeURIComponent(query)}`}>Filter zurücksetzen</Link>
-          </form>
+          <FilterDisclosure activeCount={activeFilterCount}>
+            <form className="filter-panel" method="get">
+              <input type="hidden" name="q" value={query} />
+              <input type="hidden" name="view" value={view} />
+              <h2>Ergebnisse filtern</h2>
+              <div className="filter-group"><label htmlFor="year">Datenstand</label><select id="year" name="year" defaultValue={String(selectedYear)}>{facets.years.map((availableYear) => <option key={availableYear} value={availableYear}>1. Januar {availableYear}</option>)}</select></div>
+              <div className="filter-group"><label htmlFor="manufacturer">Hersteller</label><select id="manufacturer" name="manufacturer" defaultValue={manufacturer}><option value="">Alle Hersteller</option>{facets.manufacturers.map((name) => <option key={name} value={name}>{name}</option>)}</select></div>
+              <div className="filter-group"><label htmlFor="minimumStock">Mindestbestand</label><select id="minimumStock" name="minimumStock" defaultValue={minimumStock}><option value="">Kein Minimum</option><option value="10">Mindestens 10</option><option value="100">Mindestens 100</option><option value="1000">Mindestens 1.000</option></select></div>
+              {facets.referenceDecades.length > 0 && <div className="filter-group"><label htmlFor="referenceDecade">TSN-Zuteilung</label><select id="referenceDecade" name="referenceDecade" defaultValue={referenceDecade}><option value="">Alle Zeiträume</option>{facets.referenceDecades.map((decade) => <option key={decade} value={decade}>{decade}–{decade + 9}</option>)}</select></div>}
+              {facets.fuels.length > 0 && <div className="filter-group"><label htmlFor="fuel">Kraftstoff</label><select id="fuel" name="fuel" defaultValue={fuel}><option value="">Alle Kraftstoffe</option>{facets.fuels.map((fuelName) => <option key={fuelName} value={fuelName}>{fuelName}</option>)}</select></div>}
+              {hasTechnicalReference ? <>
+                <div className="filter-group"><label htmlFor="generation">Baureihe</label><select id="generation" name="generation" defaultValue={generation}><option value="">Alle Baureihen</option><option>C215</option><option>C216</option><option>W211</option></select></div>
+                <div className="filter-group"><label htmlFor="facelift">Modellpflege</label><select id="facelift" name="facelift" defaultValue={facelift}><option value="">Alle Stände</option><option>Vor-Mopf</option><option>Mopf</option></select></div>
+                <div className="filter-group"><label htmlFor="drivetrain">Antrieb</label><select id="drivetrain" name="drivetrain" defaultValue={drivetrain}><option value="">Alle Antriebe</option><option>Hinterradantrieb</option><option>4MATIC</option></select></div>
+              </> : <div className="filter-note">
+                <Info size={16} aria-hidden="true" />
+                <p><strong>Baujahr noch nicht ableitbar</strong>Die TSN-Zuteilung grenzt den Zeitraum ein. Für Baureihe und Modellpflege fehlt noch eine belegte Referenz.</p>
+              </div>}
+              <button className="primary-button filter-submit" type="submit">Filter anwenden</button>
+              <Link className="reset-link" href={`/?q=${encodeURIComponent(query)}`}>Filter zurücksetzen</Link>
+            </form>
+          </FilterDisclosure>
           <div>
             <div className="result-tools">
               <div className="view-switch" aria-label="Datenart auswählen">

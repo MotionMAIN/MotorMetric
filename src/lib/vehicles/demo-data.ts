@@ -94,9 +94,9 @@ export const demoVehicles: VehicleVariant[] = [
 ];
 
 export const demoAliases = new Map<string, string[]>([
-  ["mercedes-cl-500-c215", ["CL500", "CL 500", "MERCEDES CL500", "C215 CL 500"]],
-  ["mercedes-cl-500-c216-vormopf", ["CL500", "CL 500", "MERCEDES CL500", "C216 CL 500", "C216 VORMOPF"]],
-  ["mercedes-cl-500-c216-mopf", ["CL500", "CL 500", "MERCEDES CL500", "C216 CL 500", "C216 MOPF"]],
-  ["mercedes-cl-500-c216-mopf-4matic", ["CL500", "CL 500", "MERCEDES CL500", "C216 CL 500", "CL 500 4MATIC"]],
-  ["mercedes-e-420-cdi-w211", ["W211 420 CDI", "E 420 CDI", "0999 AFT", "HSN 0999 TSN AFT"]]
+  ["mercedes-cl-500-c215", ["CL500", "CL 500", "MERCEDES CL500"]],
+  ["mercedes-cl-500-c216-vormopf", ["CL500", "CL 500", "MERCEDES CL500"]],
+  ["mercedes-cl-500-c216-mopf", ["CL500", "CL 500", "MERCEDES CL500"]],
+  ["mercedes-cl-500-c216-mopf-4matic", ["CL500", "CL 500", "MERCEDES CL500", "CL 500 4MATIC"]],
+  ["mercedes-e-420-cdi-w211", ["E 420 CDI", "0999 AFT", "HSN 0999 TSN AFT"]]
 ]);

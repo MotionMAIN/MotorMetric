@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
@@ -6,8 +6,14 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://motormetric.de"),
   title: "MotorMetric – Amtliche Fahrzeugbestände entschlüsselt",
-  description: "Durchsuche den deutschen Fahrzeugbestand nach Modell, Baureihe oder HSN/TSN.",
+  description: "Durchsuche den deutschen Fahrzeugbestand nach Modellname oder HSN/TSN.",
   icons: { icon: "/motormetric-icon.png", apple: "/motormetric-icon.png" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

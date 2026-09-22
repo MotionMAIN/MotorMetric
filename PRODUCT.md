@@ -24,11 +24,11 @@ Die Anwendung verbindet amtliche Bestandszahlen mit einer quellenbelegten, vertr
 
 ## Operating Context
 
-Der Hauptablauf beginnt mit einer fehlertoleranten Suche nach Modellname, Baureihe oder HSN/TSN. Ergebnisse werden nach Generation und Variante gruppiert, lassen sich fachlich filtern und öffnen ihre vollständige Berechnungsgrundlage. Historische Neuzulassungen sind eine separate Ansicht mit erklärendem Kontext.
+Der Hauptablauf beginnt mit einer fehlertoleranten Suche nach Modellname oder HSN/TSN. Ergebnisse werden nach Generation und Variante gruppiert, lassen sich fachlich filtern und öffnen ihre vollständige Berechnungsgrundlage. Historische Neuzulassungen sind eine separate Ansicht mit erklärendem Kontext.
 
 ## Capabilities and Constraints
 
-- Normalisierte Alias-Suche für Schreibweisen wie „CL500“, „CL 500“, „Mercedes CL500“, „C216 CL 500“, „W211 420 CDI“, „HSN 0999 TSN AFT“ und „0999 AFT“.
+- Normalisierte Alias-Suche für Modellschreibweisen wie „CL500“, „CL 500“, „Mercedes CL500“, „E420CDI“, „HSN 0999 TSN AFT“ und „0999 AFT“. Interne Baureihencodes wie „W220“, „C216“ oder „E46“ sind keine unterstützte Suchsprache.
 - Automatische Aggregation ausschließlich für eindeutige, aktive HSN/TSN-Zuordnungen; unsichere Zuordnungen bleiben separat sichtbar.
 - Filter nach Baureihe, Produktionszeitraum, Vor-Mopf/Mopf, Motorisierung und Antrieb.
 - Nachweis von Quelle, Bestandsstichtag, Zuordnungsstatus und Vertrauensstufe.
