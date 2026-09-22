@@ -10,3 +10,4 @@ coverage
 tmp/
 data/raw/*
 !data/raw/.gitkeep
+deploy/*.dump

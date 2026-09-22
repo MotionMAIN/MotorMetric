@@ -243,6 +243,42 @@ function codeLikeToken(token: string): boolean {
   return /^(?=.*[a-z])(?=.*\d)[a-z\d-]{2,6}$/i.test(token);
 }
 
+async function findHistoricCandidateYears(tokens: string[]): Promise<number[]> {
+  if (!tokens.length) return [];
+  const tokenSets = [
+    tokens,
+    ...tokens.flatMap((token, index) => codeLikeToken(token) && tokens.length > 1
+      ? [tokens.filter((_, tokenIndex) => tokenIndex !== index)]
+      : []),
+  ];
+  const conditions = tokenSets.flatMap<Prisma.Fz2VehicleSnapshotWhereInput>((candidateTokens) => {
+    const variants: Prisma.Fz2VehicleSnapshotWhereInput[] = [
+      { AND: candidateTokens.map((token) => fz2TokenCondition(token, false)) },
+    ];
+    if (candidateTokens.length === 1 && splitCompactVehicleToken(candidateTokens[0]).length > 1) {
+      variants.push({ AND: candidateTokens.map((token) => fz2TokenCondition(token, true)) });
+    }
+    const chassisCode = candidateTokens.length === 1 ? candidateTokens[0].match(/^[wcrx](\d{3})$/i)?.[1] : undefined;
+    if (chassisCode) {
+      variants.push({
+        tradeName: { startsWith: `${chassisCode} (`, mode: "insensitive" },
+        OR: [
+          { manufacturerName: { contains: "DAIMLER", mode: "insensitive" } },
+          { manufacturerName: { contains: "MERCEDES", mode: "insensitive" } },
+        ],
+      });
+    }
+    return variants;
+  });
+  const matches = await prisma.fz2VehicleSnapshot.findMany({
+    where: { OR: conditions },
+    distinct: ["reportingDate"],
+    select: { reportingDate: true },
+    orderBy: { reportingDate: "desc" },
+  });
+  return matches.map((match) => match.reportingDate.getUTCFullYear());
+}
+
 function matchesTechnicalIntent(result: VehicleResult, intent: TechnicalSearchIntent): boolean {
   if (intent.fuel && result.fuel !== intent.fuel) return false;
   if (intent.powerKw !== undefined && result.powerKw !== intent.powerKw) return false;
@@ -254,6 +290,7 @@ function matchesTechnicalIntent(result: VehicleResult, intent: TechnicalSearchIn
 
 export async function searchVehicles(query: string, filters: SearchFilters = {}): Promise<VehicleSearchOutcome> {
   const years = await availableYears();
+  const hasExplicitYear = Boolean(filters.year?.trim());
   const requestedYear = Number(filters.year);
   const selectedYear = years.includes(requestedYear) ? requestedYear : (years[0] ?? new Date().getUTCFullYear());
   const key = keyQuery(query);
@@ -312,6 +349,12 @@ export async function searchVehicles(query: string, filters: SearchFilters = {})
   }
   if (filters.fuel) results = results.filter((result) => result.fuel === filters.fuel);
   results.sort(newestReferenceFirst);
+  if (!results.length && !hasExplicitYear && !key) {
+    for (const fallbackYear of await findHistoricCandidateYears(tokens)) {
+      const fallback = await searchVehicles(query, { ...filters, year: String(fallbackYear) });
+      if (fallback.results.length) return fallback;
+    }
+  }
   if (!results.length && process.env.DEMO_DATA_FALLBACK === "true" && years.length === 0) results = searchDemoVehicles(query, filters);
   return { results, ignoredTerm, facets: { years, manufacturers, referenceDecades, fuels }, selectedYear };
 }
