@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SourceKind {
+  KBA_STOCK
+  KBA_REGISTRATIONS
+  VEHICLE_REFERENCE
+  MANUAL_RESEARCH
+}
+
+enum ImportStatus {
+  VALIDATING
+  VALIDATED
+  PUBLISHED
+  FAILED
+}
+
+enum MappingStatus {
+  CONFIRMED
+  REVIEW
+  REJECTED
+}
+
+enum ConfidenceLevel {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum FaceliftStatus {
+  PRE_FACELIFT
+  FACELIFT
+  NOT_APPLICABLE
+}
+
+model Manufacturer {
+  id            Int           @id @default(autoincrement())
+  name          String        @unique @db.VarChar(160)
+  modelFamilies ModelFamily[]
+}
+
+model ModelFamily {
+  id             Int               @id @default(autoincrement())
+  manufacturerId Int
+  name           String            @db.VarChar(160)
+  manufacturer   Manufacturer      @relation(fields: [manufacturerId], references: [id])
+  generations    ModelGeneration[]
+
+  @@unique([manufacturerId, name])
+}
+
+model ModelGeneration {
+  id              Int              @id @default(autoincrement())
+  familyId        Int
+  code            String           @db.VarChar(40)
+  productionStart DateTime?        @db.Date
+  productionEnd   DateTime?        @db.Date
+  family          ModelFamily      @relation(fields: [familyId], references: [id])
+  variants        VehicleVariant[]
+
+  @@unique([familyId, code])
+}
+
+model VehicleVariant {
+  id               Int                     @id @default(autoincrement())
+  generationId     Int
+  slug             String                  @unique @db.VarChar(180)
+  name             String                  @db.VarChar(180)
+  engine           String                  @db.VarChar(120)
+  powerKw          Int
+  drivetrain       String                  @db.VarChar(80)
+  facelift         FaceliftStatus
+  productionStart  DateTime?               @db.Date
+  productionEnd    DateTime?               @db.Date
+  generation       ModelGeneration         @relation(fields: [generationId], references: [id])
+  aliases          ModelAlias[]
+  mappings         VariantMapping[]
+  referenceRecords ExternalVehicleRecord[]
+}
+
+model ModelAlias {
+  id              Int            @id @default(autoincrement())
+  variantId       Int
+  alias           String         @db.VarChar(220)
+  normalizedAlias String         @db.VarChar(220)
+  variant         VehicleVariant @relation(fields: [variantId], references: [id])
+
+  @@unique([variantId, normalizedAlias])
+  @@index([normalizedAlias])
+}
+
+model HsnTsnKey {
+  id               Int                       @id @default(autoincrement())
+  hsn              String                    @db.VarChar(4)
+  tsn              String                    @db.VarChar(8)
+  manufacturerName String                    @db.VarChar(240)
+  tradeName        String?                   @db.VarChar(240)
+  mappings         VariantMapping[]
+  stockSnapshots   StockSnapshot[]
+  registrations    NewRegistrationSnapshot[]
+  externalRecords  ExternalVehicleRecord[]
+
+  @@unique([hsn, tsn])
+  @@index([manufacturerName])
+  @@index([tradeName])
+}
+
+model DataSource {
+  id              Int                     @id @default(autoincrement())
+  key             String                  @unique @db.VarChar(80)
+  name            String                  @db.VarChar(180)
+  kind            SourceKind
+  homepageUrl     String?
+  licenseNote     String?
+  isOfficial      Boolean                 @default(false)
+  sourceFiles     SourceFile[]
+  externalRecords ExternalVehicleRecord[]
+  evidence        MappingEvidence[]
+}
+
+model SourceFile {
+  id              Int                       @id @default(autoincrement())
+  dataSourceId    Int
+  name            String                    @db.VarChar(255)
+  sha256          String                    @unique @db.VarChar(64)
+  sourceUrl       String?
+  reportingDate   DateTime?                 @db.Date
+  archivedPath    String
+  createdAt       DateTime                  @default(now())
+  dataSource      DataSource                @relation(fields: [dataSourceId], references: [id])
+  importRuns      ImportRun[]
+  mappings        VariantMapping[]
+  stockSnapshots  StockSnapshot[]
+  registrations   NewRegistrationSnapshot[]
+  externalRecords ExternalVehicleRecord[]
+  fz2Snapshots    Fz2VehicleSnapshot[]
+}
+
+/// Historical KBA FZ 2 rows (currently imported for 2005–2018). FZ 2 publishes TSN and technical
+/// characteristics, but no reliably row-level HSN, so these records remain
+/// separate from the exact HSN/TSN keys in FZ 6.
+model Fz2VehicleSnapshot {
+  id               Int        @id @default(autoincrement())
+  sourceFileId     Int
+  reportingDate    DateTime   @db.Date
+  identityKey      String     @db.VarChar(64)
+  manufacturerName String     @db.VarChar(240)
+  tradeName        String     @db.VarChar(300)
+  tsn              String     @db.VarChar(8)
+  powerKw          Int
+  fuelCode         String     @db.VarChar(12)
+  allWheel         Boolean
+  bodyCode         String?    @db.VarChar(12)
+  count            Int
+  sourceFile       SourceFile @relation(fields: [sourceFileId], references: [id])
+
+  @@unique([sourceFileId, identityKey])
+  @@index([reportingDate])
+  @@index([manufacturerName])
+  @@index([tradeName])
+  @@index([identityKey, reportingDate])
+}
+
+model ImportRun {
+  id           Int          @id @default(autoincrement())
+  sourceFileId Int
+  status       ImportStatus
+  report       Json
+  startedAt    DateTime     @default(now())
+  publishedAt  DateTime?
+  sourceFile   SourceFile   @relation(fields: [sourceFileId], references: [id])
+}
+
+model ExternalVehicleRecord {
+  id               Int             @id @default(autoincrement())
+  dataSourceId     Int
+  sourceFileId     Int?
+  externalId       String          @db.VarChar(180)
+  hsnTsnKeyId      Int?
+  matchedVariantId Int?
+  manufacturer     String          @db.VarChar(180)
+  model            String          @db.VarChar(220)
+  generationCode   String?         @db.VarChar(80)
+  productionStart  DateTime?       @db.Date
+  productionEnd    DateTime?       @db.Date
+  powerKw          Int?
+  engine           String?         @db.VarChar(160)
+  drivetrain       String?         @db.VarChar(100)
+  raw              Json
+  importedAt       DateTime        @default(now())
+  dataSource       DataSource      @relation(fields: [dataSourceId], references: [id])
+  sourceFile       SourceFile?     @relation(fields: [sourceFileId], references: [id])
+  hsnTsnKey        HsnTsnKey?      @relation(fields: [hsnTsnKeyId], references: [id])
+  matchedVariant   VehicleVariant? @relation(fields: [matchedVariantId], references: [id])
+
+  @@unique([dataSourceId, externalId])
+  @@index([hsnTsnKeyId])
+}
+
+model VariantMapping {
+  id                  Int               @id @default(autoincrement())
+  variantId           Int
+  hsnTsnKeyId         Int
+  sourceFileId        Int?
+  status              MappingStatus
+  confidence          ConfidenceLevel
+  isActive            Boolean           @default(false)
+  manuallyConfirmedAt DateTime?
+  validFrom           DateTime?         @db.Date
+  validUntil          DateTime?         @db.Date
+  variant             VehicleVariant    @relation(fields: [variantId], references: [id])
+  hsnTsnKey           HsnTsnKey         @relation(fields: [hsnTsnKeyId], references: [id])
+  sourceFile          SourceFile?       @relation(fields: [sourceFileId], references: [id])
+  evidence            MappingEvidence[]
+
+  @@unique([variantId, hsnTsnKeyId])
+  @@index([hsnTsnKeyId, isActive, status])
+}
+
+model MappingEvidence {
+  id           Int            @id @default(autoincrement())
+  mappingId    Int
+  dataSourceId Int
+  externalId   String?        @db.VarChar(180)
+  sourceUrl    String?
+  note         String?
+  capturedAt   DateTime       @default(now())
+  mapping      VariantMapping @relation(fields: [mappingId], references: [id])
+  dataSource   DataSource     @relation(fields: [dataSourceId], references: [id])
+}
+
+model StockSnapshot {
+  id            Int        @id @default(autoincrement())
+  hsnTsnKeyId   Int
+  sourceFileId  Int
+  reportingDate DateTime   @db.Date
+  count         Int
+  hsnTsnKey     HsnTsnKey  @relation(fields: [hsnTsnKeyId], references: [id])
+  sourceFile    SourceFile @relation(fields: [sourceFileId], references: [id])
+
+  @@unique([hsnTsnKeyId, reportingDate])
+}
+
+model NewRegistrationSnapshot {
+  id           Int        @id @default(autoincrement())
+  hsnTsnKeyId  Int
+  sourceFileId Int
+  year         Int
+  count        Int
+  hsnTsnKey    HsnTsnKey  @relation(fields: [hsnTsnKeyId], references: [id])
+  sourceFile   SourceFile @relation(fields: [sourceFileId], references: [id])
+
+  @@unique([hsnTsnKeyId, year])
+}

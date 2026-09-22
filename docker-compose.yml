@@ -1,0 +1,44 @@
+services:
+  app:
+    build:
+      context: .
+    environment:
+      DATABASE_URL: postgresql://bestandfinder:bestandfinder@database:5432/bestandfinder?schema=public
+      DEMO_DATA_FALLBACK: "false"
+    ports:
+      - "3000:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      target: migrator
+    environment:
+      DATABASE_URL: postgresql://bestandfinder:bestandfinder@database:5432/bestandfinder?schema=public
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: "no"
+
+  database:
+    image: postgres:17-alpine
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: bestandfinder
+      POSTGRES_USER: bestandfinder
+      POSTGRES_PASSWORD: bestandfinder
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bestandfinder -d bestandfinder"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

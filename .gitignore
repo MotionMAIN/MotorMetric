@@ -1,0 +1,12 @@
+node_modules
+.next
+.env
+.env.local
+coverage
+*.log
+*.tsbuildinfo
+.DS_Store
+.impeccable/
+tmp/
+data/raw/*
+!data/raw/.gitkeep
