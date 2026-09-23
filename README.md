@@ -120,6 +120,15 @@ ghcr.io/motionmain/motormetric:latest
 
 bereitgestellt und im Mittwald Container Hosting gemeinsam mit PostgreSQL betrieben. Geheimnisse und Datenbankzugänge werden ausschließlich als Umgebungsvariablen konfiguriert und nicht in das Image eingebaut.
 
+Ein stabiler SemVer-Tag veröffentlicht automatisch die getaggte Version und aktualisiert gleichzeitig `latest`:
+
+```bash
+git tag v0.0.1
+git push origin v0.0.1
+```
+
+Der Workflow akzeptiert ausschließlich Tag-Pushes des Repository-Inhabers `MotionMAIN` und erzeugt anschließend `ghcr.io/motionmain/motormetric:v0.0.1` sowie `ghcr.io/motionmain/motormetric:latest`. Vorabversionen wie `v0.0.2-rc.1` werden bewusst nicht veröffentlicht.
+
 ## Hinweis
 
 MotorMetric ist kein Angebot des Kraftfahrt-Bundesamtes und steht in keiner Verbindung zum KBA. Quellen, Datenstände und methodische Einschränkungen werden innerhalb der Anwendung ausdrücklich ausgewiesen.
