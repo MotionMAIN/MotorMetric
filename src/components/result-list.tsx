@@ -66,7 +66,7 @@ export function ResultList({ results, view, reportingYear }: { results: VehicleR
                   <strong>{view === "stock" ? formatNumber(variant.stock) : variant.registrations.length > 0 ? formatNumber(variant.registrations.reduce((sum, item) => sum + item.count, 0)) : "–"}</strong>
                   <span>{view === "stock" ? `Stand ${variant.reportingDate}` : variant.registrations.length > 0 ? "im gezeigten Zeitraum" : "noch nicht importiert"}</span>
                 </div>
-                <Link href={`/fahrzeuge/${variant.slug}`} className="row-link" aria-label={`${variant.name} ${generation} im Detail öffnen`}>
+                <Link href={`/vehicles/${variant.slug}`} className="row-link" aria-label={`${variant.name} ${generation} im Detail öffnen`}>
                   <ChevronRight size={20} />
                 </Link>
               </article>

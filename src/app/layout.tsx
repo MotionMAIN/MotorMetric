@@ -35,7 +35,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </Link>
             <nav className="main-nav" aria-label="Hauptnavigation">
               <Link href="/?q=CL500">Fahrzeugsuche</Link>
-              <Link href="/datenquellen">Datenquellen</Link>
+              <Link href="/data-sources">Datenquellen</Link>
             </nav>
           </div>
         </header>
@@ -43,7 +43,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <footer className="site-footer">
           <div className="shell footer-inner">
             <p>MotorMetric · Amtliche Fahrzeugbestände entschlüsselt</p>
-            <div><Link href="/datenquellen">Methodik</Link><span aria-hidden="true">·</span><a href="mailto:hallo@motormetric.de">Kontakt</a></div>
+            <div><Link href="/data-sources">Methodik</Link><span aria-hidden="true">·</span><a href="mailto:hallo@motormetric.de">Kontakt</a></div>
           </div>
         </footer>
       </body>
