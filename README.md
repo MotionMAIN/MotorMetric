@@ -129,8 +129,6 @@ git push origin v0.0.1
 
 Der Workflow akzeptiert ausschließlich Tag-Pushes des Repository-Inhabers `MotionMAIN` und erzeugt anschließend `ghcr.io/motionmain/motormetric:v0.0.1` sowie `ghcr.io/motionmain/motormetric:latest`. Vorabversionen wie `v0.0.2-rc.1` werden bewusst nicht veröffentlicht.
 
-Nach einem erfolgreichen Push zieht Mittwald `latest` für den bereits konfigurierten MotorMetric-Service und erstellt diesen neu. Dafür müssen im GitHub-Repository das Secret `MITTWALD_API_TOKEN` und die Variable `STACK_ID` hinterlegt sein. Der Workflow verändert die Stack-Konfiguration nicht und bricht ab, wenn im Stack nicht genau ein Service dieses Image verwendet.
-
 ## Hinweis
 
 MotorMetric ist kein Angebot des Kraftfahrt-Bundesamtes und steht in keiner Verbindung zum KBA. Quellen, Datenstände und methodische Einschränkungen werden innerhalb der Anwendung ausdrücklich ausgewiesen.
