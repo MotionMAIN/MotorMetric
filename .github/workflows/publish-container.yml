@@ -86,7 +86,7 @@ jobs:
               | select((.pendingState.image // .deployedState.image) == $image)
               | .id
             ]' <<<"${stack}"
-          )
+          )"
           service_count="$(jq 'length' <<<"${service_ids}")"
 
           if [[ ${service_count} -ne 1 ]]; then
