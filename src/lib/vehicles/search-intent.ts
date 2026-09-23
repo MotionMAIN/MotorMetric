@@ -19,9 +19,32 @@ const fuelTerms: Record<string, TechnicalSearchIntent["fuel"]> = {
 
 const attachedFuelTerms = ["electric", "benzin", "diesel", "tfsi", "cdi", "tdi", "tsi", "fsi"] as const;
 
+const manufacturerAliases: Record<string, string[]> = {
+  mercedes: ["Mercedes", "Daimler"],
+  mercedesbenz: ["Mercedes-Benz", "Daimler"],
+};
+
 export function splitCompactVehicleToken(token: string): string[] {
   const parts = token.match(/[a-z]+|\d+/gi) ?? [token];
   return parts.length > 1 ? parts : [token];
+}
+
+export function manufacturerSearchTerms(token: string): string[] {
+  const normalized = token.toLocaleLowerCase("de-DE").replace(/[^a-z0-9]/g, "");
+  return manufacturerAliases[normalized] ?? [token];
+}
+
+export function findModelNameParts(tokens: string[]): string[] | null {
+  for (const token of tokens) {
+    const parts = splitCompactVehicleToken(token);
+    if (parts.length > 1 && parts.some((part) => /^\d+$/.test(part))) return parts;
+  }
+  for (let index = 0; index < tokens.length - 1; index += 1) {
+    if (/^[a-z]{1,3}$/i.test(tokens[index]) && /^\d{2,4}$/.test(tokens[index + 1])) {
+      return [tokens[index], tokens[index + 1]];
+    }
+  }
+  return null;
 }
 
 export function parseTechnicalSearch(query: string): TechnicalSearchIntent {

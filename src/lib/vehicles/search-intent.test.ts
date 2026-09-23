@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { parseTechnicalSearch, splitCompactVehicleToken } from "./search-intent";
+import {
+  findModelNameParts,
+  manufacturerSearchTerms,
+  parseTechnicalSearch,
+  splitCompactVehicleToken,
+} from "./search-intent";
 
 describe("parseTechnicalSearch", () => {
   it("trennt Modell, Generation, Hubraum und TDI-Suchabsicht", () => {
@@ -27,5 +32,16 @@ describe("parseTechnicalSearch", () => {
   it("zerlegt kompakte Modellnamen an Buchstaben-Ziffer-Grenzen", () => {
     expect(splitCompactVehicleToken("e420")).toEqual(["e", "420"]);
     expect(splitCompactVehicleToken("c63amg")).toEqual(["c", "63", "amg"]);
+  });
+
+  it("erkennt einen Modellnamen auch hinter einem Hersteller", () => {
+    expect(findModelNameParts(["Mercedes", "CL", "500"])).toEqual(["CL", "500"]);
+    expect(findModelNameParts(["Mercedes", "CL500"])).toEqual(["CL", "500"]);
+  });
+
+  it("übersetzt Mercedes in belegte KBA-Herstellerbezeichnungen", () => {
+    expect(manufacturerSearchTerms("Mercedes")).toEqual(["Mercedes", "Daimler"]);
+    expect(manufacturerSearchTerms("Mercedes-Benz")).toEqual(["Mercedes-Benz", "Daimler"]);
+    expect(manufacturerSearchTerms("Audi")).toEqual(["Audi"]);
   });
 });

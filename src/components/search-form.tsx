@@ -10,7 +10,7 @@ export function SearchForm({ defaultValue = "", compact = false }: { defaultValu
           <input
             name="q"
             defaultValue={defaultValue}
-            placeholder="z. B. Mercedes CL 500 oder 0999 AFT"
+            placeholder="z. B. Mercedes CL 500, 0999 oder AFT"
             autoComplete="off"
             list="vehicle-examples"
           />
@@ -21,6 +21,8 @@ export function SearchForm({ defaultValue = "", compact = false }: { defaultValu
         <option value="CL 500" />
         <option value="E 420 CDI" />
         <option value="0999 AFT" />
+        <option value="0999" />
+        <option value="AFT" />
       </datalist>
     </form>
   );

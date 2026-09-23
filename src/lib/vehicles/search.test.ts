@@ -16,6 +16,20 @@ describe("vehicle search", () => {
     expect(results.map((result) => result.generation)).toContain("W211");
   });
 
+  it("finds every vehicle matching a standalone HSN", () => {
+    const results = searchDemoVehicles("0999");
+
+    expect(results).toHaveLength(3);
+    expect(results.every((result) => result.keys.some((key) => key.hsn === "0999"))).toBe(true);
+  });
+
+  it("finds every vehicle matching a standalone TSN", () => {
+    const results = searchDemoVehicles("AFT");
+
+    expect(results).toHaveLength(2);
+    expect(results.every((result) => result.keys.some((key) => key.tsn === "AFT"))).toBe(true);
+  });
+
   it("never includes uncertain keys in the stock sum", () => {
     const result = searchDemoVehicles("CL 500").find((candidate) => candidate.uncertainKeyCount > 0);
     expect(result).toBeDefined();

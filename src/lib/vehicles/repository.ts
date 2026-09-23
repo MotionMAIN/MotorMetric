@@ -1,7 +1,13 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/db/prisma";
 import { searchDemoVehicles } from "./search";
-import { parseTechnicalSearch, splitCompactVehicleToken, type TechnicalSearchIntent } from "./search-intent";
+import {
+  findModelNameParts,
+  manufacturerSearchTerms,
+  parseTechnicalSearch,
+  splitCompactVehicleToken,
+  type TechnicalSearchIntent,
+} from "./search-intent";
 import type { SearchFilters, VehicleResult } from "./types";
 
 function formatDate(date: Date): string {
@@ -101,14 +107,8 @@ function keyQuery(query: string): { hsn: string; tsn: string } | null {
 }
 
 function matchesCompactQuery(tradeName: string | null, tokens: string[]): boolean {
-  const spacedModel = tokens.length === 2 && /^[a-z]{1,3}$/i.test(tokens[0]) && /^\d{2,4}$/.test(tokens[1])
-    ? tokens.join("")
-    : null;
-  const compactModel = tokens.length === 1 && splitCompactVehicleToken(tokens[0]).length > 1
-    ? tokens[0]
-    : spacedModel;
-  if (!compactModel) return true;
-  const modelParts = splitCompactVehicleToken(compactModel);
+  const modelParts = findModelNameParts(tokens);
+  if (!modelParts) return true;
   return new RegExp(`(?:^|[^a-z0-9])${modelParts.join("\\s*")}(?:$|[^a-z0-9])`, "i").test(tradeName ?? "");
 }
 
@@ -130,8 +130,12 @@ function kbaTokenCondition(token: string, expandCompact: boolean): Prisma.HsnTsn
   return {
     AND: parts.map((part) => ({
       OR: [
-        { manufacturerName: { contains: part, mode: "insensitive" } },
+        ...manufacturerSearchTerms(part).map((term) => ({
+          manufacturerName: { contains: term, mode: "insensitive" as const },
+        })),
         { tradeName: { contains: part, mode: "insensitive" } },
+        ...(/^\d{4}$/.test(part) ? [{ hsn: { equals: part } }] : []),
+        ...(/^[a-z0-9]{3}$/i.test(part) ? [{ tsn: { equals: part, mode: "insensitive" as const } }] : []),
       ],
     })),
   };
@@ -149,7 +153,9 @@ function fz2TokenCondition(token: string, expandCompact: boolean): Prisma.Fz2Veh
   return {
     AND: parts.map((part) => ({
       OR: [
-        { manufacturerName: { contains: part, mode: "insensitive" } },
+        ...manufacturerSearchTerms(part).map((term) => ({
+          manufacturerName: { contains: term, mode: "insensitive" as const },
+        })),
         { tradeName: { contains: part, mode: "insensitive" } },
         { tsn: { equals: part, mode: "insensitive" } },
       ],
