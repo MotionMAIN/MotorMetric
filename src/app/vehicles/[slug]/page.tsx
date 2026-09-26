@@ -14,6 +14,11 @@ export default async function VehicleDetail({ params }: { params: Promise<{ slug
 
   const maxRegistration = Math.max(...vehicle.registrations.map((item) => item.count));
   const maxStock = Math.max(...(vehicle.stockHistory ?? []).map((item) => item.count));
+  const keySummary = vehicle.keyCount === 1
+    ? vehicle.keyType === "TSN"
+      ? `TSN ${vehicle.keys[0].tsn} · HSN in FZ 2 nicht veröffentlicht`
+      : `HSN/TSN ${vehicle.keys[0].hsn}/${vehicle.keys[0].tsn}`
+    : `${vehicle.keyCount} HSN/TSN`;
 
   return (
     <main className="detail-page">
@@ -22,7 +27,7 @@ export default async function VehicleDetail({ params }: { params: Promise<{ slug
         <header className="detail-hero">
           <div>
             <h1>{vehicle.name} <span className="text-[#1859d1]">{vehicle.generation}</span></h1>
-            <p>{vehicle.manufacturer} · {vehicle.productionPeriod} · {vehicle.facelift}</p>
+            <p>{vehicle.manufacturer} · {keySummary} · {vehicle.productionPeriod} · {vehicle.facelift}</p>
           </div>
           <div className="headline-stock"><strong>{formatNumber(vehicle.stock)}</strong><span>Bestand am KBA-Stichtag {vehicle.reportingDate}</span></div>
         </header>

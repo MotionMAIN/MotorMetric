@@ -45,7 +45,7 @@ export function findModelNameParts(tokens: string[]): string[] | null {
     if (parts.length > 1 && parts.some((part) => /^\d+$/.test(part))) return parts;
   }
   for (let index = 0; index < tokens.length - 1; index += 1) {
-    if (/^[a-z]{1,3}$/i.test(tokens[index]) && /^\d{2,4}$/.test(tokens[index + 1])) {
+    if (/^[a-z]{1,2}$/i.test(tokens[index]) && /^\d{2,4}$/.test(tokens[index + 1])) {
       return [tokens[index], tokens[index + 1]];
     }
   }

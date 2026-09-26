@@ -207,6 +207,15 @@ async function findFz2Records(tokens: string[], year: number, expandCompact = fa
   });
 }
 
+async function findFz2RecordsByTsn(tsn: string, year: number) {
+  return prisma.fz2VehicleSnapshot.findMany({
+    where: { reportingDate: yearRange(year), tsn: { equals: tsn, mode: "insensitive" } },
+    include: { sourceFile: { include: { dataSource: true } } },
+    orderBy: [{ manufacturerName: "asc" }, { tradeName: "asc" }, { tsn: "asc" }],
+    take: 100,
+  });
+}
+
 function mergeRecordsById<T extends { id: number }>(...recordSets: T[][]): T[] {
   return [...new Map(recordSets.flat().map((record) => [record.id, record])).values()];
 }
@@ -243,11 +252,16 @@ async function findHistoricCandidateYears(tokens: string[]): Promise<number[]> {
   return matches.map((match) => match.reportingDate.getUTCFullYear());
 }
 
-function matchesTechnicalIntent(result: VehicleResult, intent: TechnicalSearchIntent): boolean {
+function matchesTechnicalIntent(
+  result: VehicleResult,
+  intent: TechnicalSearchIntent,
+  allowMissingDisplacement = false,
+): boolean {
   if (intent.fuel && result.fuel !== intent.fuel) return false;
   if (intent.powerKw !== undefined && result.powerKw !== intent.powerKw) return false;
   if (intent.displacementCc !== undefined) {
-    if (result.displacementCc === undefined || Math.abs(result.displacementCc - intent.displacementCc) > 120) return false;
+    if (result.displacementCc === undefined) return allowMissingDisplacement;
+    if (Math.abs(result.displacementCc - intent.displacementCc) > 120) return false;
   }
   return true;
 }
@@ -271,11 +285,13 @@ export async function searchVehicles(query: string, filters: SearchFilters = {})
       .filter((result) => matchesTechnicalIntent(result, intent));
   } else {
     const historicTokens = key ? [key.tsn] : tokens;
-    const records = await findFz2SearchRecords(historicTokens, selectedYear);
+    const records = key
+      ? await findFz2RecordsByTsn(key.tsn, selectedYear)
+      : await findFz2SearchRecords(historicTokens, selectedYear);
     results = records
       .filter((record) => matchesCompactQuery(record.tradeName, historicTokens))
       .map((record) => toFz2VehicleResult(record))
-      .filter((result) => matchesTechnicalIntent(result, intent));
+      .filter((result) => matchesTechnicalIntent(result, intent, true));
   }
 
   const manufacturers = [...new Set(results.map((result) => result.manufacturer))].sort((a, b) => a.localeCompare(b, "de"));

@@ -38,6 +38,7 @@ describe("parseTechnicalSearch", () => {
   it("erkennt einen Modellnamen auch hinter einem Hersteller", () => {
     expect(findModelNameParts(["Mercedes", "CL", "500"])).toEqual(["CL", "500"]);
     expect(findModelNameParts(["Mercedes", "CL500"])).toEqual(["CL", "500"]);
+    expect(findModelNameParts(["BMW", "525"])).toBeNull();
   });
 
   it("übersetzt Mercedes in belegte KBA-Herstellerbezeichnungen", () => {
