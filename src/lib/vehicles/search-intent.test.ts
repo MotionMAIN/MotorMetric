@@ -3,6 +3,7 @@ import {
   findModelNameParts,
   manufacturerSearchTerms,
   parseTechnicalSearch,
+  searchableVehicleTokens,
   splitCompactVehicleToken,
 } from "./search-intent";
 
@@ -43,5 +44,10 @@ describe("parseTechnicalSearch", () => {
     expect(manufacturerSearchTerms("Mercedes")).toEqual(["Mercedes", "Daimler"]);
     expect(manufacturerSearchTerms("Mercedes-Benz")).toEqual(["Mercedes-Benz", "Daimler"]);
     expect(manufacturerSearchTerms("Audi")).toEqual(["Audi"]);
+  });
+
+  it("behandelt einen ergänzenden W-Baureihencode nicht als amtlichen Handelsnamen", () => {
+    expect(searchableVehicleTokens(["w211", "e420"])).toEqual(["e420"]);
+    expect(searchableVehicleTokens(["w211"])).toEqual(["w211"]);
   });
 });

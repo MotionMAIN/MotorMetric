@@ -34,6 +34,11 @@ export function manufacturerSearchTerms(token: string): string[] {
   return manufacturerAliases[normalized] ?? [token];
 }
 
+export function searchableVehicleTokens(tokens: string[]): string[] {
+  if (tokens.length < 2) return tokens;
+  return tokens.filter((token) => !/^w\d{3}$/i.test(token));
+}
+
 export function findModelNameParts(tokens: string[]): string[] | null {
   for (const token of tokens) {
     const parts = splitCompactVehicleToken(token);

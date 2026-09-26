@@ -5,6 +5,7 @@ import {
   findModelNameParts,
   manufacturerSearchTerms,
   parseTechnicalSearch,
+  searchableVehicleTokens,
   splitCompactVehicleToken,
   type TechnicalSearchIntent,
 } from "./search-intent";
@@ -258,7 +259,7 @@ export async function searchVehicles(query: string, filters: SearchFilters = {})
   const selectedYear = years.includes(requestedYear) ? requestedYear : (years[0] ?? new Date().getUTCFullYear());
   const key = keyQuery(query);
   const intent = parseTechnicalSearch(query);
-  const tokens = intent.textTokens.slice(0, 6);
+  const tokens = searchableVehicleTokens(intent.textTokens.slice(0, 6));
   let results: VehicleResult[];
 
   if (selectedYear >= 2019) {
@@ -269,9 +270,10 @@ export async function searchVehicles(query: string, filters: SearchFilters = {})
       .filter((result): result is VehicleResult => result !== null)
       .filter((result) => matchesTechnicalIntent(result, intent));
   } else {
-    const records = key ? [] : await findFz2SearchRecords(tokens, selectedYear);
+    const historicTokens = key ? [key.tsn] : tokens;
+    const records = await findFz2SearchRecords(historicTokens, selectedYear);
     results = records
-      .filter((record) => matchesCompactQuery(record.tradeName, tokens))
+      .filter((record) => matchesCompactQuery(record.tradeName, historicTokens))
       .map((record) => toFz2VehicleResult(record))
       .filter((result) => matchesTechnicalIntent(result, intent));
   }
